@@ -1,54 +1,89 @@
-'use client';
+"use client";
 
-import { Input } from '@/components/ui/input';
-import Image from 'next/image';
-import Link from 'next/link';
-import { navLinks } from '@/lib/comicNavigationLinks';
-import { useState, useMemo, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { comics } from '@/lib/comicDataSample';
+import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import Link from "next/link";
+import { navLinks } from "@/lib/comicNavigationLinks";
+import { useState, useMemo, useEffect, createContext, useContext } from "react";
+import dynamic from "next/dynamic";
+import { comics } from "@/lib/comicDataSample";
 
 // Dynamically import wallet-related components with SSR disabled
-const WalletMultiButton = dynamic(
-  () => import('@solana/wallet-adapter-react-ui').then((mod) => mod.WalletMultiButton),
+const WalletMultiButtonDynamic = dynamic(
+  () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletMultiButton),
   { ssr: false }
 );
-const WalletModalProvider = dynamic(
-  () => import('@solana/wallet-adapter-react-ui').then((mod) => mod.WalletModalProvider),
+const WalletModalProviderDynamic = dynamic(
+  () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletModalProvider),
   { ssr: false }
 );
-const ConnectionProvider = dynamic(
-  () => import('@solana/wallet-adapter-react').then((mod) => mod.ConnectionProvider),
+const ConnectionProviderDynamic = dynamic(
+  () => import("@solana/wallet-adapter-react").then((mod) => mod.ConnectionProvider),
   { ssr: false }
 );
-const WalletProvider = dynamic(
-  () => import('@solana/wallet-adapter-react').then((mod) => mod.WalletProvider),
+const WalletProviderDynamic = dynamic(
+  () => import("@solana/wallet-adapter-react").then((mod) => mod.WalletProvider),
   { ssr: false }
 );
 
 // Import wallet adapter styles
-import '@solana/wallet-adapter-react-ui/styles.css';
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { clusterApiUrl, Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { useWallet } from '@solana/wallet-adapter-react';
+import "@solana/wallet-adapter-react-ui/styles.css";
+import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { clusterApiUrl, Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { useWallet } from "@solana/wallet-adapter-react";
 
-// Wallet context provider to wrap the Navbar
-function WalletContextProvider({ children }: { children: React.ReactNode }) {
-  const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-  const wallets = useMemo(
-    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-    [network]
-  );
+// Wallet context
+const WalletContext = createContext<{
+  address: string | null;
+  connected: boolean;
+  sendTransaction?: (transaction: any, connection: any) => Promise<string>;
+}>({
+  address: null,
+  connected: false,
+  sendTransaction: undefined,
+});
+
+// Component to manage wallet state after providers are loaded
+function WalletStateManager({ children }: { children: React.ReactNode }) {
+  const wallet = useWallet();
+  const { publicKey, connected, sendTransaction } = wallet;
+  const address = publicKey?.toString() || null;
+
+  useEffect(() => {
+    console.log('Wallet state in WalletStateManager:', { address, connected, sendTransaction });
+  }, [address, connected, sendTransaction]);
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect={false}>
-        <WalletModalProvider>{children}</WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
+    <WalletContext.Provider value={{ address, connected, sendTransaction }}>
+      {children}
+    </WalletContext.Provider>
   );
+}
+
+export function WalletContextProvider({ children }: { children: React.ReactNode }) {
+  const network = WalletAdapterNetwork.Devnet;
+  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], [network]);
+
+  return (
+    <ConnectionProviderDynamic endpoint={endpoint}>
+      <WalletProviderDynamic wallets={wallets} autoConnect={false}>
+        <WalletModalProviderDynamic>
+          <WalletStateManager>{children}</WalletStateManager>
+        </WalletModalProviderDynamic>
+      </WalletProviderDynamic>
+    </ConnectionProviderDynamic>
+  );
+}
+
+// Custom hook to use wallet state
+export function useWalletState() {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error("useWalletState must be used within a WalletContextProvider");
+  }
+  return context;
 }
 
 // Component to handle wallet connection and sign-up (mocked backend call)
@@ -60,7 +95,7 @@ function WalletSignUpButton() {
   useEffect(() => {
     return () => {
       if (wallet && wallet.disconnect) {
-        wallet.disconnect().catch((err) => console.error('Disconnect error:', err));
+        wallet.disconnect().catch((err) => console.error("Disconnect error:", err));
       }
     };
   }, [wallet]);
@@ -70,7 +105,6 @@ function WalletSignUpButton() {
       const address = publicKey.toString();
       setWalletAddress(address);
       fetchBalance(address);
-      // Mocked API call instead of direct User model
       updateUserInDatabase(address);
     } else if (!publicKey) {
       setWalletAddress(null);
@@ -80,33 +114,32 @@ function WalletSignUpButton() {
 
   const fetchBalance = async (address: string) => {
     try {
-      const connection = new Connection(clusterApiUrl(WalletAdapterNetwork.Devnet), 'confirmed');
+      const connection = new Connection(clusterApiUrl(WalletAdapterNetwork.Devnet), "confirmed");
       const publicKey = new PublicKey(address);
       const balance = await connection.getBalance(publicKey);
       const balanceInSol = balance / LAMPORTS_PER_SOL;
       setSolBalance(balanceInSol);
       updateUserInDatabase(address, balanceInSol);
     } catch (error) {
-      console.error('Error fetching balance:', error);
+      console.error("Error fetching balance:", error);
       setSolBalance(null);
     }
   };
 
   const updateUserInDatabase = async (address: string, balance?: number) => {
     try {
-      // Replace with API call to backend
-      const response = await fetch('http://localhost:4000/api/auth/update-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://localhost:4000/api/auth/update-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress: address,
           solBalance: balance,
           createdAt: new Date().toISOString(),
         }),
       });
-      if (!response.ok) throw new Error('Failed to update user');
+      if (!response.ok) throw new Error("Failed to update user");
     } catch (error) {
-      console.error('Error updating user in database:', error);
+      console.error("Error updating user in database:", error);
     }
   };
 
@@ -114,26 +147,26 @@ function WalletSignUpButton() {
     if (!address || !signMessage) return;
 
     try {
-      const message = new TextEncoder().encode('Sign up to Nerdwork');
+      const message = new TextEncoder().encode("Sign up to Nerdwork");
       const signature = await signMessage(message);
-      const signatureBase64 = Buffer.from(signature).toString('base64');
+      const signatureBase64 = Buffer.from(signature).toString("base64");
 
-      const res = await fetch('http://localhost:4000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("http://localhost:4000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           walletAddress: address,
           signature: signatureBase64,
-          message: 'Sign up to Nerdwork',
+          message: "Sign up to Nerdwork",
         }),
       });
 
       const data = await res.json();
       if (data.token) {
-        localStorage.setItem('token', data.token);
+        localStorage.setItem("token", data.token);
       }
     } catch (error) {
-      console.error('Sign-up error:', error);
+      console.error("Sign-up error:", error);
     }
   };
 
@@ -156,15 +189,15 @@ function WalletSignUpButton() {
           )}
         </span>
       )}
-      <WalletMultiButton
+      <WalletMultiButtonDynamic
         style={{
-          backgroundColor: walletAddress ? '#1E1E1E66' : '#2563eb',
-          color: walletAddress ? 'white' : 'white',
-          padding: '8px 16px',
-          borderRadius: '5px',
-          fontSize: '14px',
+          backgroundColor: walletAddress ? "#1E1E1E66" : "#2563eb",
+          color: walletAddress ? "white" : "white",
+          padding: "8px 16px",
+          borderRadius: "5px",
+          fontSize: "14px",
         }}
-        labels={{ main: 'Sign' }}
+        labels={{ main: "Sign" }}
       />
     </div>
   );
@@ -172,7 +205,7 @@ function WalletSignUpButton() {
 
 // Search component to filter comics
 function SearchBar() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(comics);
 
   useEffect(() => {
@@ -225,32 +258,30 @@ function SearchBar() {
 
 export default function Navbar() {
   return (
-    <WalletContextProvider>
-      <header className="w-full px-6 pt-7 pb-5 text-white border-b border-zinc-900">
-        <nav className="mx-auto flex items-center justify-between gap-20">
-          <div className="flex items-center gap-10 flex-1 py-2">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/icons/logo-icon.svg"
-                alt="Nerdwork Logo"
-                width={130}
-                height={130}
-              />
-            </Link>
-            <SearchBar />
-            <div className="hidden md:flex items-center gap-6 text-sm">
-              {navLinks.map((link) => (
-                <Link key={link.href} href={link.href}>
-                  {link.label}
-                </Link>
-              ))}
-            </div>
+    <header className="w-full px-6 pt-7 pb-5 text-white border-b border-zinc-900">
+      <nav className="mx-auto flex items-center justify-between gap-20">
+        <div className="flex items-center gap-10 flex-1 py-2">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/icons/logo-icon.svg"
+              alt="Nerdwork Logo"
+              width={130}
+              height={130}
+            />
+          </Link>
+          <SearchBar />
+          <div className="hidden md:flex items-center gap-6 text-sm">
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href}>
+                {link.label}
+              </Link>
+            ))}
           </div>
-          <div>
-            <WalletSignUpButton />
-          </div>
-        </nav>
-      </header>
-    </WalletContextProvider>
+        </div>
+        <div>
+          <WalletSignUpButton />
+        </div>
+      </nav>
+    </header>
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import GenreTabs from '@/components/common/nerdwork+/genreTab';
-import Navbar from '@/components/common/nerdwork+/navigationBar';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import GenreTabs from "@/components/common/nerdwork+/genreTab";
+import Navbar from "@/components/common/nerdwork+/navigationBar";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { WalletContextProvider } from "@/components/common/nerdwork+/navigationBar";
 
 export default function RootLayout({
   children,
@@ -21,16 +22,18 @@ export default function RootLayout({
 
   return (
     <div lang="en">
-      <div className="flex flex-col min-h-screen text-white">
-        <Navbar />
-        {showGenreTabs && (
-          <>
-            <GenreTabs selectedGenre={selectedGenre} setSelectedGenre={setSelectedGenre} />
-            {children}
-          </>
-        )}
-        {!showGenreTabs && children}
-      </div>
+      <WalletContextProvider>
+        <div className="flex flex-col min-h-screen text-white">
+          <Navbar />
+          {showGenreTabs && (
+            <>
+              <GenreTabs selectedGenre={selectedGenre} setSelectedGenre={setSelectedGenre} />
+              {children}
+            </>
+          )}
+          {!showGenreTabs && children}
+        </div>
+      </WalletContextProvider>
     </div>
   );
 }

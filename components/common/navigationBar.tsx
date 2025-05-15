@@ -53,7 +53,7 @@ export default function NavigationBar() {
 
         {/* Auth Buttons */}
         <div className="hidden md:flex gap-4">
-          <Button variant="outline" className="bg-blue-600">Login</Button>
+          <Button className="bg-blue-600">Login</Button>
           <Button>Sign Up</Button>
         </div>
 
@@ -74,7 +74,7 @@ export default function NavigationBar() {
               ))}
             </ul>
             <div className="flex flex-col gap-3 mt-4">
-              <Button variant="outline">Login</Button>
+              <Button >Login</Button>
               <Button>Sign Up</Button>
             </div>
           </div>

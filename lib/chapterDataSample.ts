@@ -1,52 +1,68 @@
-export type Chapter = {
-  number: number;
-  title: string;
-  description?: string;
-  date: string;
-  status: string;
-  action: string;
-};
-
-export const chapters: Chapter[] = [
+export const chapters = [
   {
+    comicId: 1,
     number: 1,
-    title: "Chapter 1: Blessed",
-    description:
-      "A techno-industrial dystopia, the sprawling megalopolis of Durban stretches across the country's east coast, breeding ground for a cosmopolitan.",
-    date: "April 24, 2025",
-    status: "Completed",
+    title: "Chapter 1: The Beginning",
+    description: "The journey starts here.",
+    status: "Complete",
+    date: "2025-01-01",
     action: "Read",
+    pages: ["/images/comics/comic_1.svg", "/images/comics/comic_2.svg"],
+    locked: false, // Free chapter
   },
   {
+    comicId: 1,
     number: 2,
-    title: "Chapter 2: Renewal",
-    description:
-      "In a world dominated by technology and industry, the vast city of New Haven sprawls along the western shores, giving rise to a chaotic blend of innovation and despair.",
-    date: "April 17, 2025",
-    status: "70% Complete",
+    title: "Chapter 2: The Challenge",
+    description: "A new challenge arises.",
+    status: "Published",
+    date: "2025-02-01",
     action: "Continue Reading",
+    pages: ["/images/comics/comic_4.svg", "/images/comics/comic_3.svg"],
+    locked: false, // Free chapter
   },
-    {
+  {
+    comicId: 1,
     number: 3,
-    title: "Past Lives",
-    date: "April 17, 2025",
-    status: "70% Complete",
+    title: "Chapter 3: Into the Abyss",
+    description: "The dark journey begins.",
+    status: "Published",
+    date: "2025-01-15",
     action: "Unlock 0.01 SOL",
+    pages: ["/images/comics/comic_5.svg", "/images/comics/comic_6.svg"],
+    locked: true, // Locked chapter
   },
   {
+    comicId: 1,
     number: 4,
-    title: "Netherworld",
-    date: "April 17, 2025",
-    status: "70% Complete",
+    title: "Chapter 4: The Deepening Abyss",
+    description: "The journey grows darker.",
+    status: "Published",
+    date: "2025-01-20",
     action: "Unlock 0.01 SOL",
+    pages: ["/images/comics/comic_5.svg", "/images/comics/comic_6.svg"],
+    locked: true, // Locked chapter
   },
   {
-    number: 5,
-    title: "Chapter 3: Past Lives",
-    description:
-      "In a world dominated by technology and industry, the vast city of New Haven sprawls along the western shores, giving rise to a chaotic blend of innovation and despair.",
-    date: "April 17, 2025",
-    status: "70% Complete",
+    comicId: 2,
+    number: 1,
+    title: "Chapter 1: A New Dawn",
+    description: "A new story begins.",
+    status: "Published",
+    date: "2025-01-15",
+    action: "Read",
+    pages: ["/images/comics/comic_5.svg", "/images/comics/comic_6.svg"],
+    locked: false,
+  },
+  {
+    comicId: 2,
+    number: 2,
+    title: "Chapter 2: Rising Shadows",
+    description: "Shadows emerge.",
+    status: "Published",
+    date: "2025-01-15",
     action: "Unlock 0.01 SOL",
+    pages: ["/images/comics/comic_5.svg", "/images/comics/comic_6.svg"],
+    locked: true,
   },
 ];
