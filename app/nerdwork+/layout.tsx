@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import GenreTabs from '@/components/common/nerdwork+/genreTab';
 import Navbar from '@/components/common/nerdwork+/navigationBar';
@@ -11,7 +11,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const showGenreTabs = !pathname.match(/^\/nerdwork\+\/comics\/[^/]+\/chapter\/[^/]+$/);
+  const hideGenreTabsRoutes = [
+    /^\/nerdwork\+\/comics\/[^/]+\/chapter\/[^/]+$/,
+    /^\/nerdwork\+\/comics\/[^/]+$/,
+    /^\/nerdwork\+\/marketplace$/,
+  ];
+  const showGenreTabs = !hideGenreTabsRoutes.some((regex) => pathname.match(regex));
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
 
   return (

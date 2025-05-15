@@ -1,3 +1,4 @@
+'use client';
 
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
@@ -6,7 +7,6 @@ import { navLinks } from '@/lib/comicNavigationLinks';
 import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { comics } from '@/lib/comicDataSample';
-import { User } from '@/backend/src/models/userModel';
 
 // Dynamically import wallet-related components with SSR disabled
 const WalletMultiButton = dynamic(
@@ -51,13 +51,12 @@ function WalletContextProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Component to handle wallet connection, sign-up, and database update
+// Component to handle wallet connection and sign-up (mocked backend call)
 function WalletSignUpButton() {
   const { publicKey, signMessage, wallet, disconnect } = useWallet();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
 
-  // Cleanup on unmount to disconnect wallet
   useEffect(() => {
     return () => {
       if (wallet && wallet.disconnect) {
@@ -66,12 +65,12 @@ function WalletSignUpButton() {
     };
   }, [wallet]);
 
-  // Handle wallet selection and database update
   useEffect(() => {
     if (publicKey && !walletAddress) {
       const address = publicKey.toString();
       setWalletAddress(address);
       fetchBalance(address);
+      // Mocked API call instead of direct User model
       updateUserInDatabase(address);
     } else if (!publicKey) {
       setWalletAddress(null);
@@ -95,12 +94,17 @@ function WalletSignUpButton() {
 
   const updateUserInDatabase = async (address: string, balance?: number) => {
     try {
-      await User.findOneAndUpdate(
-        { walletAddress: address },
-        { walletAddress: address, createdAt: new Date(), ...(balance !== undefined && { solBalance: balance }) },
-        { upsert: true, new: true, runValidators: true }
-      );
-      console.log('User updated in database:', address);
+      // Replace with API call to backend
+      const response = await fetch('http://localhost:4000/api/auth/update-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: address,
+          solBalance: balance,
+          createdAt: new Date().toISOString(),
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to update user');
     } catch (error) {
       console.error('Error updating user in database:', error);
     }
@@ -160,6 +164,7 @@ function WalletSignUpButton() {
           borderRadius: '5px',
           fontSize: '14px',
         }}
+        labels={{ main: 'Sign' }}
       />
     </div>
   );
@@ -202,7 +207,7 @@ function SearchBar() {
               />
               <Link
                 key={comic.id}
-                href={`/nerdworks+/comics/${comic.id}`}
+                href={`/nerdwork+/comics/${comic.id}`}
                 className="flex flex-col px-4 py-4 w-full text-white text-[15px] font-semibold hover:bg-zinc-900 rounded-md"
               >
                 <div className="flex flex-col">
@@ -241,7 +246,6 @@ export default function Navbar() {
               ))}
             </div>
           </div>
-
           <div>
             <WalletSignUpButton />
           </div>

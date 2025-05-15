@@ -8,7 +8,7 @@ interface IUser {
 
 const userSchema = new Schema<IUser>({
   walletAddress: { type: String, required: true, unique: true },
-  solBalance: { type: Number }, // Optional field
+  solBalance: { type: Number }, // Optional fi----
   createdAt: { type: Date, default: Date.now },
 });
 

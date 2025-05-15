@@ -37,38 +37,39 @@ export default function MarketplacePage() {
   return (
     <div className="min-h-screen text-white mt-10">
       {/* Filter Bar */}
-      <div className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
+      <div className="px-6">
+      <h1 className='font-bold text-4xl mb-10'>Marketplace</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 pb-4 border-b border-zinc-800">
           <div className="flex space-x-2">
             <Button
               onClick={() => setSortFilter('new')}
               className={`${
-                sortFilter === 'new' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'
-              } hover:bg-blue-700`}
+                sortFilter === 'new' ? ' text-white' : 'bg-gray-800 text-gray-300 rounded-none'
+              }hover:border-b-zinc-800`}
             >
               New
             </Button>
             <Button
               onClick={() => setSortFilter('popular')}
               className={`${
-                sortFilter === 'popular' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'
-              } hover:bg-blue-700`}
+                sortFilter === 'popular' ? 'text-white' : ' text-gray-300 rounded-none'
+              } hover:border-b hover:border-zinc-800`}
             >
               Popular
             </Button>
             <Button
               onClick={() => setSortFilter('price-low')}
               className={`${
-                sortFilter === 'price-low' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'
-              } hover:bg-blue-700`}
+                sortFilter === 'price-low' ? 'text-white' : ' text-gray-300 rounded-none'
+              } hover:border-b hover:border-zinc-800`}
             >
               Price: Low to High
             </Button>
             <Button
               onClick={() => setSortFilter('price-high')}
               className={`${
-                sortFilter === 'price-high' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300'
-              } hover:bg-blue-700`}
+                sortFilter === 'price-high' ? ' text-white' : ' text-gray-300'
+              } hover:border-b hover:border-zinc-800`}
             >
               Price: High to Low
             </Button>

@@ -99,7 +99,7 @@ export default function Home() {
               PEOPLE <br /> PASSION <br /> COMMUNITY
             </h2>
             <p className="text-white mb-6 max-w-sm w-full">
-              No matter your passion, there's a community for you.
+              No matter your passion, there&apos;s a community for you.
             </p>
             <div className="group relative">
               <ul className="space-y-3 mb-4 font-medium text-[18px] md:text-xl">
@@ -191,7 +191,7 @@ export default function Home() {
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-1 gap-5 mt-12 text-left md:text-center px-8">
         <div className="flex mx-auto max-w-3xl w-full justify-center items-center">
           <h2 className="text-3xl md:text-5xl font-extrabold leading-tight text-left md:text-center font-obo">FROM CREATORS DEVOTED READERS.
-          <br className="md:hidden" /> THERE'S A STORY FOR EVERYONE
+          <br className="md:hidden" /> THERE&apos;S A STORY FOR EVERYONE
           </h2>
         </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-9 lg:gap-12 mt-5 text-left md:text-start md:mx-30 xl:mx-90">
@@ -238,7 +238,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col md:w-xs gap-4">
             <Button className="bg-blue-600">Register for comic con 2025</Button>
-            <Button variant="outline">See last year's comic con</Button>
+            <Button variant="outline">See last year&apos;s comic con</Button>
           </div>
         </div>
 

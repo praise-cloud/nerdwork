@@ -44,7 +44,7 @@
         if (storedToken) setToken(storedToken);
 
         async function fetchNFT() {
-          const res = await fetch(`http://localhost:4000/api/nft/${params.id}`, {
+          const res = await fetch(`http://localhost:4000/api/nfts/${params.id}`, {
             headers: { Authorization: `Bearer ${storedToken || token}` },
           });
           if (!res.ok) throw new Error('Failed to fetch NFT');
@@ -60,7 +60,7 @@
         }
 
         async function fetchActivity() {
-          const res = await fetch(`http://localhost:4000/api/nft/${params.id}/activity`, {
+          const res = await fetch(`http://localhost:4000/api/nfts/${params.id}/activity`, {
             headers: { Authorization: `Bearer ${storedToken || token}` },
           });
           if (!res.ok) throw new Error('Failed to fetch activity');
@@ -82,7 +82,7 @@
           alert('Please connect your wallet first');
           return;
         }
-        const res = await fetch('http://localhost:4000/api/nft/mint', {
+        const res = await fetch('http://localhost:4000/api/nfts/mint', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -96,6 +96,31 @@
 
       return (
         <WalletContextProvider>
+          <div className="min-h-screen bg-gray-900 text-white">
+            <header className="w-full px-6 py-3 shadow-md">
+              <nav className="flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                  <Image
+                    src="/icons/logo-icon.svg"
+                    alt="Nerdwork Logo"
+                    width={130}
+                    height={130}
+                    className="mr-6"
+                  />
+                  <div className="flex space-x-6 text-sm">
+                    <a href="/comics" className="hover:text-blue-500">Comics</a>
+                    <a href="/comics/marketplace" className="hover:text-blue-500">Marketplace</a>
+                    <a href="/library" className="hover:text-blue-500">Library</a>
+                    <a href="/creator/dashboard" className="hover:text-blue-500">Create</a>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{walletAddress ? `${walletAddress.slice(0, 6)}...` : '0.087 SOL'}</span>
+                  <WalletMultiButton />
+                </div>
+              </nav>
+            </header>
+
             <div className="container mx-auto px-6 py-10">
               <div className="flex flex-col lg:flex-row gap-10">
                 <div className="relative w-full lg:w-[400px] h-[500px] flex-shrink-0">
@@ -216,6 +241,7 @@
                 </div>
               </div>
             </div>
+          </div>
         </WalletContextProvider>
       )
     }
