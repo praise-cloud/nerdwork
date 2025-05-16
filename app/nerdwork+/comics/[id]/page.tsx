@@ -117,15 +117,12 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
 // Define the PageProps type to match Next.js's expectation
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] >>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function ComicDetailPage({ params: paramsPromise, searchParams: searchParamsPromise }: PageProps) {
+export default function ComicDetailPage({ params: paramsPromise }: PageProps) {
   // Unwrap the params Promise using React.use()
   const params = React.use(paramsPromise);
-  // Unwrap the searchParams Promise using React.use(), default to empty object if undefined
-  const searchParams = React.use(searchParamsPromise ?? Promise.resolve({}));
-
   const comicId = parseInt(params.id);
   const comic = comics.find((c) => c.id === comicId);
   const router = useRouter();
