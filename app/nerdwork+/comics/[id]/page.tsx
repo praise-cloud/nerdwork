@@ -40,9 +40,9 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
   const buyerPublicKey = new PublicKey(userId);
 
   // Replace with an actual seller public key (e.g., a devnet wallet address you control)
-  const sellerPublicKey = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'); // Dummy address for testing
+  const sellerPublicKey = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
-  const lamports = 0.01 * LAMPORTS_PER_SOL; // Price of the chapter in lamports
+  const lamports = 0.01 * LAMPORTS_PER_SOL;
 
   // Check buyer's balance
   const buyerBalance = await connection.getBalance(buyerPublicKey);

@@ -51,7 +51,7 @@ export const chapters = [
     status: "Published",
     date: "2025-01-15",
     action: "Read",
-    pages: ["/images/comics/comic_5.svg", "/images/comics/comic_6.svg"],
+    pages: ["/images/chapters/chapter_1.png"],
     locked: false,
   },
   {
@@ -62,7 +62,7 @@ export const chapters = [
     status: "Published",
     date: "2025-01-15",
     action: "Unlock 0.01 SOL",
-    pages: ["/images/comics/comic_5.svg", "/images/comics/comic_6.svg"],
+    pages: ["/images/chapters/chapter_2.jpg"],
     locked: true,
   },
 ];

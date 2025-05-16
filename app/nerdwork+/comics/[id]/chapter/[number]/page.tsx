@@ -41,10 +41,10 @@ export default function ComicViewingPage({ params }: { params: Promise<{ id: str
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center py-10">
       <div className="w-full max-w-4xl px-6 mb-6">
-        <h1 className="text-3xl font-bold">{comic.title}</h1>
-        <h2 className="text-xl text-gray-400 mt-2">{chapter.title}</h2>
-        <p className="text-gray-500 mt-1">{chapter.description}</p>
-        <div className="flex gap-4 mt-4">
+        {/* <h1 className="text-3xl font-bold">{comic.title}</h1> */}
+        {/* <h2 className="text-xl text-gray-400 mt-2">{chapter.title}</h2> */}
+        {/* <p className="text-gray-500 mt-1">{chapter.description}</p> */}
+        {/* <div className="flex gap-4 mt-4">
           {prevChapter && (
             <Link href={`/nerdwork+/comics/${comic.id}/chapter/${prevChapter.number}`} className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition">
               Previous Chapter
@@ -55,14 +55,14 @@ export default function ComicViewingPage({ params }: { params: Promise<{ id: str
               Next Chapter
             </Link>
           )}
-        </div>
+        </div> */}
       </div>
       <div className="w-full max-w-3xl flex flex-col items-center">
         {chapter.pages && chapter.pages.length > 0 ? (
           chapter.pages.map((page, index) => (
             <div key={index} className="w-full mb-4">
               <Image src={page} alt={`Page ${index + 1} of ${chapter.title}`} width={800} height={1200} className="object-contain w-full" />
-              <p className="text-center text-gray-400 mt-2">Page {index + 1}</p>
+              {/* <p className="text-center text-gray-400 mt-2">Page {index + 1}</p> */}
             </div>
           ))
         ) : (

@@ -109,11 +109,11 @@ export function useWalletState() {
   return context;
 }
 
-// Component to handle wallet connection and sign-up (mocked backend call)
+// Component to handle wallet connection and sign-up
 function WalletSignUpButton() {
   const { publicKey, signMessage, wallet, disconnect } = useWallet();
+  const { address, balance } = useWalletState(); // Use context for balance
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [solBalance, setSolBalance] = useState<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -127,48 +127,46 @@ function WalletSignUpButton() {
     if (publicKey && !walletAddress) {
       const address = publicKey.toString();
       setWalletAddress(address);
-      fetchBalance(address);
-      updateUserInDatabase(address);
+      updateUserInDatabase(address, balance || undefined);
     } else if (!publicKey) {
       setWalletAddress(null);
-      setSolBalance(null);
     }
-  }, [publicKey, walletAddress]);
-
-  const fetchBalance = async (address: string) => {
-    try {
-      const connection = new Connection(clusterApiUrl(WalletAdapterNetwork.Devnet), "confirmed");
-      const publicKey = new PublicKey(address);
-      const balance = await connection.getBalance(publicKey);
-      const balanceInSol = balance / LAMPORTS_PER_SOL;
-      setSolBalance(balanceInSol);
-      // Update the user in the database with the balance
-      await updateUserInDatabase(address, balanceInSol);
-    } catch (error) {
-      console.error("Error fetching balance in WalletSignUpButton:", error);
-      setSolBalance(null);
-    }
-  };
+  }, [publicKey, walletAddress, balance]);
 
   const updateUserInDatabase = async (address: string, balance?: number) => {
-    try {
-      const response = await fetch("http://localhost:4000/api/auth/update-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    // Retry mechanism with a maximum of 3 attempts
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Attempt ${attempt}: Updating user at http://localhost:4000/api/auth/update-user`, {
           walletAddress: address,
           solBalance: balance,
           createdAt: new Date().toISOString(),
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update user");
+        });
+        const response = await fetch("http://localhost:4000/api/auth/update-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: address,
+            solBalance: balance,
+            createdAt: new Date().toISOString(),
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status} error` }));
+          throw new Error(errorData.error || `Failed to update user (HTTP ${response.status})`);
+        }
+        console.log("User updated successfully");
+        return { success: true };
+      } catch (error) {
+        console.warn(`Attempt ${attempt} failed to update user:`, error);
+        if (attempt === maxRetries) {
+          console.error("Max retries reached. Failed to update user in database:", error);
+          return { success: false, message: "User update failed after retries (backend unavailable)" };
+        }
+        // Wait 1 second before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-      return { success: true };
-    } catch (error) {
-      console.error("Failed to update user in database (backend unavailable):", error);
-      return { success: false, message: "User update failed (backend unavailable)" };
     }
   };
 
@@ -180,19 +178,35 @@ function WalletSignUpButton() {
       const signature = await signMessage(message);
       const signatureBase64 = Buffer.from(signature).toString("base64");
 
-      const res = await fetch("http://localhost:4000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletAddress: address,
-          signature: signatureBase64,
-          message: "Sign up to Nerdwork",
-        }),
-      });
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const res = await fetch("http://localhost:4000/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              walletAddress: address,
+              signature: signatureBase64,
+              message: "Sign up to Nerdwork",
+            }),
+          });
 
-      const data = await res.json();
-      if (data.token) {
-        localStorage.setItem("token", data.token);
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || `Login failed (HTTP ${res.status})`);
+          }
+          if (data.token) {
+            localStorage.setItem("token", data.token);
+          }
+          return;
+        } catch (error) {
+          console.warn(`Attempt ${attempt} failed to sign up:`, error);
+          if (attempt === maxRetries) {
+            console.error("Max retries reached. Failed to sign up:", error);
+            return;
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       }
     } catch (error) {
       console.error("Sign-up error:", error);
@@ -203,7 +217,7 @@ function WalletSignUpButton() {
     <div className="flex items-center gap-3">
       {walletAddress && (
         <span className="text-sm text-white">
-          {solBalance !== null ? (
+          {balance !== null ? (
             <span className="ml-2 text-sm text-gray-400 bg-[#1E1E1E66] py-3 px-6 rounded-md flex gap-2 items-center">
               <Image
                 src="/icons/credit-card-icon.svg"
@@ -212,7 +226,7 @@ function WalletSignUpButton() {
                 height={20}
                 style={{ width: 'auto', height: 'auto' }}
               />
-              {solBalance.toFixed(4)} SOL
+              {balance.toFixed(4)} SOL
             </span>
           ) : (
             <span className="ml-2 text-xs text-gray-400">Loading...</span>
