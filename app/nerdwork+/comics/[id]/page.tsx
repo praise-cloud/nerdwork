@@ -28,7 +28,6 @@ async function addComicToLibrary(userId: string | null, comicId: number) {
     return data;
   } catch (error) {
     console.error('Failed to add comic to library (backend unavailable):', error);
-    // Optionally, you can still consider this a success for the user if the backend failure is non-critical
     return { success: true, message: 'Comic added locally (backend sync failed)' };
   }
 }
@@ -120,13 +119,13 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
   const comic = comics.find((c) => c.id === comicId);
   if (!comic) return notFound();
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { address, connected, balance, sendTransaction } = useWalletState();
   const [activeTab, setActiveTab] = useState<'chapters' | 'comments' | 'store'>('chapters');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [comicChapters, setComicChapters] = useState(initialChapters.filter((ch) => ch.comicId === comic.id));
-  const [isTransactionLoading, setIsTransactionLoading] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Debug logging
   useEffect(() => {
@@ -155,20 +154,23 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
     console.log('Chapter click check:', { chapter, connected, address });
     if (chapter && chapter.locked && chapter.action === 'Unlock 0.01 SOL' && connected && address) {
       setSelectedChapter(chapterNumber);
+      setTransactionStatus('idle'); // Reset transaction status when opening the modal
+      setErrorMessage(null);
       setShowPurchaseModal(true);
     } else if (chapter && chapter.locked && chapter.action === 'Unlock 0.01 SOL') {
       alert('Please connect your wallet to unlock this chapter.');
     }
+    // If the chapter is unlocked, the Link component will handle redirection
   };
 
   const handlePurchase = async () => {
     if (selectedChapter && connected && address && sendTransaction) {
-      setIsTransactionLoading(true);
+      setTransactionStatus('loading');
+      setErrorMessage(null);
       try {
         const result = await purchaseChapter(address, selectedChapter, sendTransaction);
         if (result.success) {
-          alert('Chapter unlocked successfully!');
-          setShowPurchaseModal(false);
+          setTransactionStatus('success');
           // Update the chapter state in comicChapters
           setComicChapters((prevChapters) =>
             prevChapters.map((chapter) =>
@@ -180,14 +182,21 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
           console.log('Updated comic chapters after purchase:', comicChapters);
         }
       } catch (error) {
+        setTransactionStatus('error');
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to unlock chapter.');
         console.error('Purchase error:', error);
-        alert(error instanceof Error ? error.message : 'Failed to unlock chapter.');
-      } finally {
-        setIsTransactionLoading(false);
       }
     } else {
-      alert('Please connect your wallet to proceed with the purchase.');
+      setTransactionStatus('error');
+      setErrorMessage('Please connect your wallet to proceed with the purchase.');
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowPurchaseModal(false);
+    setTransactionStatus('idle');
+    setErrorMessage(null);
+    setSelectedChapter(null);
   };
 
   const getChapterTitle = (chapterNumber: number) => {
@@ -236,7 +245,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <div className="relative w-full md:w-[400px] h-[500px]">
-          <Image src={comic.image} alt={comic.title} fill className="object-cover rounded-lg" />
+          <Image src={comic.image} alt={comic.title} fill className="object-cover rounded-lg" priority />
         </div>
       </div>
 
@@ -322,7 +331,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
 
       <PurchaseModal
         isOpen={showPurchaseModal}
-        onClose={() => setShowPurchaseModal(false)}
+        onClose={handleCloseModal}
         chapterNumber={selectedChapter || 0}
         chapterTitle={selectedChapter ? getChapterTitle(selectedChapter) : ''}
         price="0.01 SOL"
@@ -330,7 +339,8 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
         connected={connected}
         balance={balance}
         onConfirm={handlePurchase}
-        isTransactionLoading={isTransactionLoading}
+        transactionStatus={transactionStatus}
+        errorMessage={errorMessage}
       />
     </div>
   );
