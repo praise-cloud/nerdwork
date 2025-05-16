@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Import useRouter for navigation
 import { useWalletState } from '@/components/common/nerdwork+/navigationBar';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Connection } from '@solana/web3.js';
 import { clusterApiUrl } from '@solana/web3.js';
@@ -119,6 +120,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
   const comic = comics.find((c) => c.id === comicId);
   if (!comic) return notFound();
 
+  const router = useRouter(); // Initialize useRouter for navigation
   const { address, connected, balance, sendTransaction } = useWalletState();
   const [activeTab, setActiveTab] = useState<'chapters' | 'comments' | 'store'>('chapters');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
@@ -152,15 +154,19 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
   const handleChapterClick = (chapterNumber: number) => {
     const chapter = comicChapters.find((ch) => ch.number === chapterNumber);
     console.log('Chapter click check:', { chapter, connected, address });
-    if (chapter && chapter.locked && chapter.action === 'Unlock 0.01 SOL' && connected && address) {
-      setSelectedChapter(chapterNumber);
-      setTransactionStatus('idle'); // Reset transaction status when opening the modal
-      setErrorMessage(null);
-      setShowPurchaseModal(true);
-    } else if (chapter && chapter.locked && chapter.action === 'Unlock 0.01 SOL') {
-      alert('Please connect your wallet to unlock this chapter.');
+    if (chapter) {
+      if (chapter.locked && chapter.action === 'Unlock 0.01 SOL' && connected && address) {
+        setSelectedChapter(chapterNumber);
+        setTransactionStatus('idle'); // Reset transaction status when opening the modal
+        setErrorMessage(null);
+        setShowPurchaseModal(true);
+      } else if (chapter.locked && chapter.action === 'Unlock 0.01 SOL') {
+        alert('Please connect your wallet to unlock this chapter.');
+      } else if (!chapter.locked) {
+        // Redirect to the chapter viewing page if unlocked
+        router.push(`/nerdwork+/comics/${comicId}/chapter/${chapterNumber}`);
+      }
     }
-    // If the chapter is unlocked, the Link component will handle redirection
   };
 
   const handlePurchase = async () => {
@@ -223,7 +229,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
           </p>
           <div className="flex gap-3 mt-15">
             {firstChapter && !firstChapter.locked ? (
-              <Link href={`/nerdwork+/comics/${comic.id}/chapter/${firstChapter.number}`}>
+              <Link href={`/nerdwork+/comics/${comicId}/chapter/${firstChapter.number}`}>
                 <Button className="bg-blue-600 hover:bg-blue-700">Start Reading</Button>
               </Link>
             ) : firstChapter ? (
@@ -278,7 +284,6 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
                 comicChapters.map((chapter) => (
                   <div
                     key={chapter.number}
-                    onClick={() => handleChapterClick(chapter.number)}
                     className="flex justify-between items-center py-6 border-b border-gray-700 px-5 cursor-pointer"
                   >
                     <div className="flex flex-grow gap-4 items-center">
@@ -298,11 +303,16 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
                     <div className="flex items-center gap-10">
                       <p className="text-xs text-gray-400">{chapter.date}</p>
                       {chapter.locked && chapter.action === 'Unlock 0.01 SOL' ? (
-                        <Button variant="ghost" size="sm" className="border-gray-600 text-gray-300">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="border-gray-600 text-gray-300"
+                          onClick={() => handleChapterClick(chapter.number)}
+                        >
                           Unlock 0.01 SOL
                         </Button>
                       ) : (
-                        <Link href={`/nerdwork+/comics/${comic.id}/chapter/${chapter.number}`}>
+                        <Link href={`/nerdwork+/comics/${comicId}/chapter/${chapter.number}`}>
                           <Button variant="ghost" size="sm" className="border-gray-600 text-gray-300">
                             {chapter.action}
                           </Button>

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
@@ -37,7 +37,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 const WalletContext = createContext<{
   address: string | null;
   connected: boolean;
-  balance: number | null; // Add balance to context
+  balance: number | null;
   sendTransaction?: (transaction: any, connection: any) => Promise<string>;
 }>({
   address: null,
@@ -142,9 +142,10 @@ function WalletSignUpButton() {
       const balance = await connection.getBalance(publicKey);
       const balanceInSol = balance / LAMPORTS_PER_SOL;
       setSolBalance(balanceInSol);
-      updateUserInDatabase(address, balanceInSol);
+      // Update the user in the database with the balance
+      await updateUserInDatabase(address, balanceInSol);
     } catch (error) {
-      console.error("Error fetching balance:", error);
+      console.error("Error fetching balance in WalletSignUpButton:", error);
       setSolBalance(null);
     }
   };
@@ -160,9 +161,14 @@ function WalletSignUpButton() {
           createdAt: new Date().toISOString(),
         }),
       });
-      if (!response.ok) throw new Error("Failed to update user");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update user");
+      }
+      return { success: true };
     } catch (error) {
-      console.error("Error updating user in database:", error);
+      console.error("Failed to update user in database (backend unavailable):", error);
+      return { success: false, message: "User update failed (backend unavailable)" };
     }
   };
 
@@ -204,6 +210,7 @@ function WalletSignUpButton() {
                 alt="card-logo"
                 width={20}
                 height={20}
+                style={{ width: 'auto', height: 'auto' }}
               />
               {solBalance.toFixed(4)} SOL
             </span>
@@ -260,6 +267,7 @@ function SearchBar() {
                 alt={comic.title}
                 width={50}
                 height={50}
+                style={{ width: 'auto', height: 'auto' }}
               />
               <Link
                 key={comic.id}
@@ -290,6 +298,7 @@ export default function Navbar() {
               alt="Nerdwork Logo"
               width={130}
               height={130}
+              style={{ width: 'auto', height: 'auto' }}
             />
           </Link>
           <SearchBar />
