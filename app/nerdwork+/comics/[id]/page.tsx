@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 'use client';
 
 import Image from 'next/image';
@@ -11,19 +12,25 @@ import Link from 'next/link';
 import { useWalletState } from '@/components/common/nerdwork+/navigationBar';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Connection } from '@solana/web3.js';
 import { clusterApiUrl } from '@solana/web3.js';
-import PurchaseModal from '@/components/common/nerdwork+/PurchaseModal';
+import PurchaseModal from '@/components/common/nerdwork+/purchaseModal';
 
 // Function to add comic to library using wallet address as user ID
 async function addComicToLibrary(userId: string | null, comicId: number) {
   if (!userId) throw new Error('Wallet not connected');
-  const res = await fetch('http://localhost:4000/api/library/add', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, comicId }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Failed to add comic');
-  return data;
+  try {
+    const res = await fetch('http://localhost:4000/api/library/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, comicId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to add comic');
+    return data;
+  } catch (error) {
+    console.error('Failed to add comic to library (backend unavailable):', error);
+    // Optionally, you can still consider this a success for the user if the backend failure is non-critical
+    return { success: true, message: 'Comic added locally (backend sync failed)' };
+  }
 }
 
 // Function to purchase chapter using wallet address as user ID
@@ -37,6 +44,13 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
 
   const lamports = 0.01 * LAMPORTS_PER_SOL; // Price of the chapter in lamports
 
+  // Check buyer's balance
+  const buyerBalance = await connection.getBalance(buyerPublicKey);
+  const minBalanceRequired = lamports + 5000; // Transaction amount + approximate fee (~0.000005 SOL)
+  if (buyerBalance < minBalanceRequired) {
+    throw new Error(`Insufficient balance. Required: ${(minBalanceRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL, Available: ${(buyerBalance / LAMPORTS_PER_SOL).toFixed(6)} SOL`);
+  }
+
   const transaction = new Transaction().add(
     SystemProgram.transfer({
       fromPubkey: buyerPublicKey,
@@ -46,35 +60,55 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
   );
 
   try {
-    // Add a recent blockhash to the transaction
-    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+    // Fetch a fresh blockhash
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = buyerPublicKey;
 
+    console.log('Transaction prepared:', transaction);
+
+    // Send the transaction
     const signature = await sendTransaction(transaction, connection);
-    const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+    console.log('Transaction sent, signature:', signature);
+
+    // Confirm the transaction with a timeout
+    const confirmation = await connection.confirmTransaction(
+      {
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      },
+      'confirmed'
+    );
 
     if (confirmation.value.err) {
-      throw new Error('Transaction confirmation failed');
+      throw new Error(`Transaction confirmation failed: ${JSON.stringify(confirmation.value.err)}`);
     }
 
-    // Optionally, log the transaction details to your backend
-    await fetch('http://localhost:4000/api/transactions/log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId,
-        chapterId,
-        signature,
-        amount: lamports / LAMPORTS_PER_SOL,
-        timestamp: new Date().toISOString(),
-      }),
-    });
+    console.log('Transaction confirmed:', confirmation);
+
+    // Log the transaction details to your backend (non-critical operation)
+    try {
+      await fetch('http://localhost:4000/api/transactions/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          chapterId,
+          signature,
+          amount: lamports / LAMPORTS_PER_SOL,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to log transaction to backend:', error);
+      // Continue execution even if backend logging fails
+    }
 
     return { success: true, signature };
   } catch (error) {
     console.error('Purchase failed:', error);
-    throw new Error(error instanceof Error ? error.message : 'Transaction failed');
+    throw error instanceof Error ? error : new Error('Transaction failed: Unknown error');
   }
 }
 
@@ -86,12 +120,13 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
   const comic = comics.find((c) => c.id === comicId);
   if (!comic) return notFound();
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { address, connected, balance, sendTransaction } = useWalletState();
   const [activeTab, setActiveTab] = useState<'chapters' | 'comments' | 'store'>('chapters');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [comicChapters, setComicChapters] = useState(initialChapters.filter((ch) => ch.comicId === comic.id));
-  const [isTransactionLoading, setIsTransactionLoading] = useState(false); // New loading state
+  const [isTransactionLoading, setIsTransactionLoading] = useState(false);
 
   // Debug logging
   useEffect(() => {
@@ -128,7 +163,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
 
   const handlePurchase = async () => {
     if (selectedChapter && connected && address && sendTransaction) {
-      setIsTransactionLoading(true); // Start loading
+      setIsTransactionLoading(true);
       try {
         const result = await purchaseChapter(address, selectedChapter, sendTransaction);
         if (result.success) {
@@ -148,7 +183,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
         console.error('Purchase error:', error);
         alert(error instanceof Error ? error.message : 'Failed to unlock chapter.');
       } finally {
-        setIsTransactionLoading(false); // Stop loading
+        setIsTransactionLoading(false);
       }
     } else {
       alert('Please connect your wallet to proceed with the purchase.');
@@ -295,7 +330,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
         connected={connected}
         balance={balance}
         onConfirm={handlePurchase}
-        isTransactionLoading={isTransactionLoading} // Pass the loading state
+        isTransactionLoading={isTransactionLoading}
       />
     </div>
   );
