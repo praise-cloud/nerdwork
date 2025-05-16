@@ -16,6 +16,7 @@ export default function RootLayout({
     /^\/nerdwork\+\/comics\/[^/]+\/chapter\/[^/]+$/,
     /^\/nerdwork\+\/comics\/[^/]+$/,
     /^\/nerdwork\+\/marketplace$/,
+    /^\/nerdwork\+\/marketplace\+\/nft\/[^/]+$/,
   ];
   const showGenreTabs = !hideGenreTabsRoutes.some((regex) => pathname.match(regex));
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);

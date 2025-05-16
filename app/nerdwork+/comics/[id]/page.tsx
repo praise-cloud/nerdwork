@@ -40,7 +40,7 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
   const buyerPublicKey = new PublicKey(userId);
 
   // Replace with an actual seller public key (e.g., a devnet wallet address you control)
-  const sellerPublicKey = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+  const sellerPublicKey = new PublicKey('9GGoMZM96oHr85fcSovzr2SpZyDtH89ckaJ3tbigoKxe');
 
   const lamports = 0.01 * LAMPORTS_PER_SOL;
 
