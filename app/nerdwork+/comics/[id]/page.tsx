@@ -224,7 +224,7 @@ export default function ComicDetailPage({ params: paramsPromise, searchParams: s
             12+ Rating, {comic.chapters} chapters, Action Adventure
           </p>
           <p className="mt-4 text-md text-white">
-            A techno-industrial dystopia, the sprawling megalopolis of Durban stretches across the country's east coast, breeding ground for a cosmopolitan.
+            A techno-industrial dystopia, the sprawling megalopolis of Durban stretches across the country&apos;s east coast, breeding ground for a cosmopolitan.
           </p>
           <p className="text-sm text-gray-400 mt-5">
             Author: <span className="text-white">John Uche,</span> Started: <span className="text-white">April 2015,</span> Status: <span className="text-white">Ongoing</span>
