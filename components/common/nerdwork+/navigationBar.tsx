@@ -115,10 +115,10 @@ function WalletSignUpButton() {
   const { balance } = useWalletState();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
-  useEffect(() => {
+   useEffect(() => {
     return () => {
-      if (wallet && wallet.disconnect) {
-        wallet.disconnect().catch((err) => console.error("Disconnect error:", err));
+      if (wallet?.adapter?.disconnect) {
+        wallet.adapter.disconnect().catch((err) => console.error("Disconnect error:", err));
       }
     };
   }, [wallet]);
