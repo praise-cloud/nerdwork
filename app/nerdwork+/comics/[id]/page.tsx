@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 'use client';
 
 import Image from 'next/image';
@@ -7,36 +6,13 @@ import { comics } from '@/lib/comicDataSample';
 import { chapters as initialChapters } from '@/lib/chapterDataSample';
 import { notFound } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // Import useRouter for navigation
 import { useWalletState } from '@/components/common/nerdwork+/navigationBar';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Connection } from '@solana/web3.js';
 import { clusterApiUrl } from '@solana/web3.js';
 import PurchaseModal from '@/components/common/nerdwork+/purchaseModal';
-
-// Define types for comic and chapter
-type Comic = {
-  id: number;
-  title: string;
-  image: string;
-  genreType: string;
-  chapters: number;
-  isNew?: boolean;
-};
-
-type Chapter = {
-  comicId: number;
-  number: number;
-  title: string;
-  description?: string;
-  status: string;
-  date: string;
-  locked: boolean;
-  action: string;
-};
-
-// Define type for sendTransaction function
-type SendTransaction = (transaction: Transaction, connection: Connection) => Promise<string>;
 
 // Function to add comic to library using wallet address as user ID
 async function addComicToLibrary(userId: string | null, comicId: number) {
@@ -50,14 +26,14 @@ async function addComicToLibrary(userId: string | null, comicId: number) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to add comic');
     return data;
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Failed to add comic to library (backend unavailable):', error);
     return { success: true, message: 'Comic added locally (backend sync failed)' };
   }
 }
 
 // Function to purchase chapter using wallet address as user ID
-async function purchaseChapter(userId: string | null, chapterId: number, sendTransaction: SendTransaction) {
+async function purchaseChapter(userId: string | null, chapterId: number, sendTransaction: (transaction: Transaction, connection: any) => Promise<string>) {
   if (!userId) throw new Error('Wallet not connected');
   const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
   const buyerPublicKey = new PublicKey(userId);
@@ -123,31 +99,32 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
           timestamp: new Date().toISOString(),
         }),
       });
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Failed to log transaction to backend:', error);
       // Continue execution even if backend logging fails
     }
 
     return { success: true, signature };
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('Purchase failed:', error);
     throw error instanceof Error ? error : new Error('Transaction failed: Unknown error');
   }
 }
 
-export default function ComicDetailPage({ params }: { params: { id: string } }) {
-  const comicId = parseInt(params.id);
+export default function ComicDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = React.use(params);
+  const comicId = parseInt(resolvedParams.id);
   if (isNaN(comicId)) return notFound();
 
-  const comic: Comic | undefined = comics.find((c) => c.id === comicId);
+  const comic = comics.find((c) => c.id === comicId);
   if (!comic) return notFound();
 
-  const router = useRouter();
+  const router = useRouter(); // Initialize useRouter for navigation
   const { address, connected, balance, sendTransaction } = useWalletState();
   const [activeTab, setActiveTab] = useState<'chapters' | 'comments' | 'store'>('chapters');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
-  const [comicChapters, setComicChapters] = useState< (initialChapters.filter((ch) => ch.comicId === comic.id));
+  const [comicChapters, setComicChapters] = useState(initialChapters.filter((ch) => ch.comicId === comic.id));
   const [transactionStatus, setTransactionStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -162,9 +139,9 @@ export default function ComicDetailPage({ params }: { params: { id: string } }) 
   const handleAddToLibrary = async () => {
     if (connected && address) {
       try {
-        const result = await addComicToLibrary(address, comic.id);
-        alert(result.message || 'Comic added to your library!');
-      } catch (error: unknown) {
+        await addComicToLibrary(address, comic.id);
+        alert('Comic added to your library!');
+      } catch (error) {
         console.error('Error adding comic to library:', error);
         alert('Failed to add comic to library.');
       }
@@ -179,12 +156,13 @@ export default function ComicDetailPage({ params }: { params: { id: string } }) 
     if (chapter) {
       if (chapter.locked && chapter.action === 'Unlock 0.01 SOL' && connected && address) {
         setSelectedChapter(chapterNumber);
-        setTransactionStatus('idle');
+        setTransactionStatus('idle'); // Reset transaction status when opening the modal
         setErrorMessage(null);
         setShowPurchaseModal(true);
       } else if (chapter.locked && chapter.action === 'Unlock 0.01 SOL') {
         alert('Please connect your wallet to unlock this chapter.');
       } else if (!chapter.locked) {
+        // Redirect to the chapter viewing page if unlocked
         router.push(`/nerdwork+/comics/${comicId}/chapter/${chapterNumber}`);
       }
     }
@@ -198,6 +176,7 @@ export default function ComicDetailPage({ params }: { params: { id: string } }) 
         const result = await purchaseChapter(address, selectedChapter, sendTransaction);
         if (result.success) {
           setTransactionStatus('success');
+          // Update the chapter state in comicChapters
           setComicChapters((prevChapters) =>
             prevChapters.map((chapter) =>
               chapter.number === selectedChapter && chapter.comicId === comicId
@@ -207,7 +186,7 @@ export default function ComicDetailPage({ params }: { params: { id: string } }) 
           );
           console.log('Updated comic chapters after purchase:', comicChapters);
         }
-      } catch (error: unknown) {
+      } catch (error) {
         setTransactionStatus('error');
         setErrorMessage(error instanceof Error ? error.message : 'Failed to unlock chapter.');
         console.error('Purchase error:', error);
@@ -239,7 +218,7 @@ export default function ComicDetailPage({ params }: { params: { id: string } }) 
             12+ Rating, {comic.chapters} chapters, Action Adventure
           </p>
           <p className="mt-4 text-md text-white">
-            A techno-industrial dystopia, the sprawling megalopolis of Durban stretches across the country&apos;s east coast, breeding ground for a cosmopolitan.
+            A techno-industrial dystopia, the sprawling megalopolis of Durban stretches across the country&aspo;s east coast, breeding ground for a cosmopolitan.
           </p>
           <p className="text-sm text-gray-400 mt-5">
             Author: <span className="text-white">John Uche,</span> Started: <span className="text-white">April 2015,</span> Status: <span className="text-white">Ongoing</span>
