@@ -30,7 +30,7 @@ const WalletProviderDynamic = dynamic(
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { clusterApiUrl, Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { clusterApiUrl, Connection, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 // Wallet context
@@ -38,7 +38,7 @@ const WalletContext = createContext<{
   address: string | null;
   connected: boolean;
   balance: number | null;
-  sendTransaction?: (transaction: any, connection: any) => Promise<string>;
+  sendTransaction?: (transaction: Transaction, connection: Connection) => Promise<string>;
 }>({
   address: null,
   connected: false,
@@ -61,7 +61,7 @@ function WalletStateManager({ children }: { children: React.ReactNode }) {
           const balance = await connection.getBalance(publicKey);
           const balanceInSol = balance / LAMPORTS_PER_SOL;
           setBalance(balanceInSol);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error("Error fetching balance in WalletStateManager:", error);
           setBalance(null);
         }
@@ -86,8 +86,8 @@ function WalletStateManager({ children }: { children: React.ReactNode }) {
 
 export function WalletContextProvider({ children }: { children: React.ReactNode }) {
   const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-  const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], [network]);
+  const endpoint = useMemo(() => clusterApiUrl(network), []); // Removed 'network' dependency
+  const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], []);
 
   return (
     <ConnectionProviderDynamic endpoint={endpoint}>
@@ -111,8 +111,8 @@ export function useWalletState() {
 
 // Component to handle wallet connection and sign-up
 function WalletSignUpButton() {
-  const { publicKey, signMessage, wallet, disconnect } = useWallet();
-  const { address, balance } = useWalletState(); // Use context for balance
+  const { publicKey, wallet } = useWallet();
+  const { balance } = useWalletState();
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
   useEffect(() => {
@@ -134,7 +134,6 @@ function WalletSignUpButton() {
   }, [publicKey, walletAddress, balance]);
 
   const updateUserInDatabase = async (address: string, balance?: number) => {
-    // Retry mechanism with a maximum of 3 attempts
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -158,58 +157,14 @@ function WalletSignUpButton() {
         }
         console.log("User updated successfully");
         return { success: true };
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn(`Attempt ${attempt} failed to update user:`, error);
         if (attempt === maxRetries) {
           console.error("Max retries reached. Failed to update user in database:", error);
           return { success: false, message: "User update failed after retries (backend unavailable)" };
         }
-        // Wait 1 second before retrying
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
-    }
-  };
-
-  const handleSignUp = async (address: string) => {
-    if (!address || !signMessage) return;
-
-    try {
-      const message = new TextEncoder().encode("Sign up to Nerdwork");
-      const signature = await signMessage(message);
-      const signatureBase64 = Buffer.from(signature).toString("base64");
-
-      const maxRetries = 3;
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const res = await fetch("http://localhost:4000/api/auth/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              walletAddress: address,
-              signature: signatureBase64,
-              message: "Sign up to Nerdwork",
-            }),
-          });
-
-          const data = await res.json();
-          if (!res.ok) {
-            throw new Error(data.error || `Login failed (HTTP ${res.status})`);
-          }
-          if (data.token) {
-            localStorage.setItem("token", data.token);
-          }
-          return;
-        } catch (error) {
-          console.warn(`Attempt ${attempt} failed to sign up:`, error);
-          if (attempt === maxRetries) {
-            console.error("Max retries reached. Failed to sign up:", error);
-            return;
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-    } catch (error) {
-      console.error("Sign-up error:", error);
     }
   };
 
@@ -303,31 +258,33 @@ function SearchBar() {
 
 export default function Navbar() {
   return (
-    <header className="w-full px-6 pt-7 pb-5 text-white border-b border-zinc-900">
-      <nav className="mx-auto flex items-center justify-between gap-20">
-        <div className="flex items-center gap-10 flex-1 py-2">
-          <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="/icons/logo-icon.svg"
-              alt="Nerdwork Logo"
-              width={130}
-              height={130}
-              style={{ width: 'auto', height: 'auto' }}
-            />
-          </Link>
-          <SearchBar />
-          <div className="hidden md:flex items-center gap-6 text-sm">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
-                {link.label}
-              </Link>
-            ))}
+    <WalletContextProvider>
+      <header className="w-full px-6 pt-7 pb-5 text-white border-b border-zinc-900">
+        <nav className="mx-auto flex items-center justify-between gap-20">
+          <div className="flex items-center gap-10 flex-1 py-2">
+            <Link href="/" className="flex items-center gap-2">
+              <Image
+                src="/icons/logo-icon.svg"
+                alt="Nerdwork Logo"
+                width={130}
+                height={130}
+                style={{ width: 'auto', height: 'auto' }}
+              />
+            </Link>
+            <SearchBar />
+            <div className="hidden md:flex items-center gap-6 text-sm">
+              {navLinks.map((link) => (
+                <Link key={link.href} href={link.href}>
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
-        <div>
-          <WalletSignUpButton />
-        </div>
-      </nav>
-    </header>
+          <div>
+            <WalletSignUpButton />
+          </div>
+        </nav>
+      </header>
+    </WalletContextProvider>
   );
 }
