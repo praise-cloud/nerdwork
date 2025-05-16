@@ -14,8 +14,8 @@ interface PageProps {
 export default function ComicsPage({ params: paramsPromise, searchParams: searchParamsPromise }: PageProps) {
   // Unwrap the params Promise using React.use()
   React.use(paramsPromise);
-  // Unwrap the searchParams Promise, default to empty object if undefined
-  const searchParams = React.use(searchParamsPromise ?? Promise.resolve({}));
+  // Unwrap the searchParams Promise, default to empty object with correct type if undefined
+  const searchParams = React.use(searchParamsPromise ?? Promise.resolve({} as Record<string, string | string[] | undefined>));
   // Derive selectedGenre from searchParams, default to null if not present
   const selectedGenre = searchParams.selectedGenre ? String(searchParams.selectedGenre) : null;
 
