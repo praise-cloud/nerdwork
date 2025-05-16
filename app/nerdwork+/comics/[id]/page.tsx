@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { comics } from '@/lib/comicDataSample';
-import { chapters } from '@/lib/chapterDataSample';
+import { chapters as initialChapters } from '@/lib/chapterDataSample';
 import { notFound } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import React from 'react';
@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useWalletState } from '@/components/common/nerdwork+/navigationBar';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Connection } from '@solana/web3.js';
 import { clusterApiUrl } from '@solana/web3.js';
+import PurchaseModal from '@/components/common/nerdwork+/PurchaseModal';
 
 // Function to add comic to library using wallet address as user ID
 async function addComicToLibrary(userId: string | null, comicId: number) {
@@ -31,21 +32,49 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
   const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
   const buyerPublicKey = new PublicKey(userId);
 
+  // Replace with an actual seller public key (e.g., a devnet wallet address you control)
+  const sellerPublicKey = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'); // Dummy address for testing
+
+  const lamports = 0.01 * LAMPORTS_PER_SOL; // Price of the chapter in lamports
+
   const transaction = new Transaction().add(
     SystemProgram.transfer({
       fromPubkey: buyerPublicKey,
-      toPubkey: new PublicKey('YOUR_SELLER_PUBLIC_KEY_HERE'), // Replace with actual seller address
-      lamports: 0.01 * LAMPORTS_PER_SOL,
+      toPubkey: sellerPublicKey,
+      lamports,
     })
   );
 
   try {
+    // Add a recent blockhash to the transaction
+    const { blockhash } = await connection.getLatestBlockhash('confirmed');
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = buyerPublicKey;
+
     const signature = await sendTransaction(transaction, connection);
-    await connection.confirmTransaction(signature, 'confirmed');
+    const confirmation = await connection.confirmTransaction(signature, 'confirmed');
+
+    if (confirmation.value.err) {
+      throw new Error('Transaction confirmation failed');
+    }
+
+    // Optionally, log the transaction details to your backend
+    await fetch('http://localhost:4000/api/transactions/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        chapterId,
+        signature,
+        amount: lamports / LAMPORTS_PER_SOL,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+
     return { success: true, signature };
   } catch (error) {
     console.error('Purchase failed:', error);
-    throw new Error('Transaction failed');
+    throw new Error(error instanceof Error ? error.message : 'Transaction failed');
   }
 }
 
@@ -57,17 +86,19 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
   const comic = comics.find((c) => c.id === comicId);
   if (!comic) return notFound();
 
-  const { address, connected, sendTransaction } = useWalletState();
+  const { address, connected, balance, sendTransaction } = useWalletState();
   const [activeTab, setActiveTab] = useState<'chapters' | 'comments' | 'store'>('chapters');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [comicChapters, setComicChapters] = useState(initialChapters.filter((ch) => ch.comicId === comic.id));
+  const [isTransactionLoading, setIsTransactionLoading] = useState(false); // New loading state
 
   // Debug logging
   useEffect(() => {
-    console.log('Wallet state in ComicDetailPage:', { address, connected, sendTransaction });
-  }, [address, connected, sendTransaction]);
+    console.log('Wallet state in ComicDetailPage:', { address, connected, balance, sendTransaction });
+    console.log('Comic chapters:', comicChapters);
+  }, [address, connected, balance, sendTransaction, comicChapters]);
 
-  const comicChapters = chapters.filter((ch) => ch.comicId === comic.id);
   const firstChapter = comicChapters.find((ch) => ch.number === 1);
 
   const handleAddToLibrary = async () => {
@@ -86,7 +117,7 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
 
   const handleChapterClick = (chapterNumber: number) => {
     const chapter = comicChapters.find((ch) => ch.number === chapterNumber);
-    console.log('Chapter click check:', { chapter, connected, address }); // Debug
+    console.log('Chapter click check:', { chapter, connected, address });
     if (chapter && chapter.locked && chapter.action === 'Unlock 0.01 SOL' && connected && address) {
       setSelectedChapter(chapterNumber);
       setShowPurchaseModal(true);
@@ -97,18 +128,27 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
 
   const handlePurchase = async () => {
     if (selectedChapter && connected && address && sendTransaction) {
+      setIsTransactionLoading(true); // Start loading
       try {
-        await purchaseChapter(address, selectedChapter, sendTransaction);
-        alert('Chapter unlocked successfully!');
-        setShowPurchaseModal(false);
-        const chapterIndex = chapters.findIndex((ch) => ch.number === selectedChapter && ch.comicId === comicId);
-        if (chapterIndex !== -1) {
-          chapters[chapterIndex].action = 'Read';
-          chapters[chapterIndex].locked = false;
+        const result = await purchaseChapter(address, selectedChapter, sendTransaction);
+        if (result.success) {
+          alert('Chapter unlocked successfully!');
+          setShowPurchaseModal(false);
+          // Update the chapter state in comicChapters
+          setComicChapters((prevChapters) =>
+            prevChapters.map((chapter) =>
+              chapter.number === selectedChapter && chapter.comicId === comicId
+                ? { ...chapter, action: 'Read', locked: false }
+                : chapter
+            )
+          );
+          console.log('Updated comic chapters after purchase:', comicChapters);
         }
       } catch (error) {
         console.error('Purchase error:', error);
-        alert('Failed to unlock chapter.');
+        alert(error instanceof Error ? error.message : 'Failed to unlock chapter.');
+      } finally {
+        setIsTransactionLoading(false); // Stop loading
       }
     } else {
       alert('Please connect your wallet to proceed with the purchase.');
@@ -245,30 +285,18 @@ export default function ComicDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {showPurchaseModal && selectedChapter && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-lg w-[300px] text-white">
-            <h2 className="text-xl font-bold mb-4">Unlock Chapter</h2>
-            <p className="mb-2 text-sm">#{selectedChapter}: {getChapterTitle(selectedChapter)}</p>
-            <p className="mb-2 text-gray-400 text-sm">Your Wallet: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Not connected'}</p>
-            <p className="mb-4 text-blue-400 text-sm">0.01 SOL</p>
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 mb-2 text-sm py-2"
-              onClick={handlePurchase}
-              disabled={!connected || !address}
-            >
-              Confirm
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 text-sm py-2"
-              onClick={() => setShowPurchaseModal(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
+      <PurchaseModal
+        isOpen={showPurchaseModal}
+        onClose={() => setShowPurchaseModal(false)}
+        chapterNumber={selectedChapter || 0}
+        chapterTitle={selectedChapter ? getChapterTitle(selectedChapter) : ''}
+        price="0.01 SOL"
+        address={address}
+        connected={connected}
+        balance={balance}
+        onConfirm={handlePurchase}
+        isTransactionLoading={isTransactionLoading} // Pass the loading state
+      />
     </div>
   );
 }

@@ -37,25 +37,48 @@ import { useWallet } from "@solana/wallet-adapter-react";
 const WalletContext = createContext<{
   address: string | null;
   connected: boolean;
+  balance: number | null; // Add balance to context
   sendTransaction?: (transaction: any, connection: any) => Promise<string>;
 }>({
   address: null,
   connected: false,
+  balance: null,
   sendTransaction: undefined,
 });
 
 // Component to manage wallet state after providers are loaded
 function WalletStateManager({ children }: { children: React.ReactNode }) {
   const wallet = useWallet();
-  const { publicKey, connected, sendTransaction } = wallet;
+  const { publicKey, connected, sendTransaction, connecting, disconnecting } = wallet;
   const address = publicKey?.toString() || null;
+  const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    console.log('Wallet state in WalletStateManager:', { address, connected, sendTransaction });
-  }, [address, connected, sendTransaction]);
+    const fetchBalance = async () => {
+      if (publicKey) {
+        try {
+          const connection = new Connection(clusterApiUrl(WalletAdapterNetwork.Devnet), "confirmed");
+          const balance = await connection.getBalance(publicKey);
+          const balanceInSol = balance / LAMPORTS_PER_SOL;
+          setBalance(balanceInSol);
+        } catch (error) {
+          console.error("Error fetching balance in WalletStateManager:", error);
+          setBalance(null);
+        }
+      } else {
+        setBalance(null);
+      }
+    };
+
+    fetchBalance();
+  }, [publicKey]);
+
+  useEffect(() => {
+    console.log('Wallet state in WalletStateManager:', { address, connected, balance, sendTransaction, connecting, disconnecting });
+  }, [address, connected, balance, sendTransaction, connecting, disconnecting]);
 
   return (
-    <WalletContext.Provider value={{ address, connected, sendTransaction }}>
+    <WalletContext.Provider value={{ address, connected, balance, sendTransaction }}>
       {children}
     </WalletContext.Provider>
   );
@@ -68,7 +91,7 @@ export function WalletContextProvider({ children }: { children: React.ReactNode 
 
   return (
     <ConnectionProviderDynamic endpoint={endpoint}>
-      <WalletProviderDynamic wallets={wallets} autoConnect={false}>
+      <WalletProviderDynamic wallets={wallets} autoConnect={true}>
         <WalletModalProviderDynamic>
           <WalletStateManager>{children}</WalletStateManager>
         </WalletModalProviderDynamic>

@@ -2,7 +2,7 @@ export const chapters = [
   {
     comicId: 1,
     number: 1,
-    title: "Chapter 1: The Beginning",
+    title: "The Beginning",
     description: "The journey starts here.",
     status: "Complete",
     date: "2025-01-01",
@@ -13,7 +13,7 @@ export const chapters = [
   {
     comicId: 1,
     number: 2,
-    title: "Chapter 2: The Challenge",
+    title: "The Challenge",
     description: "A new challenge arises.",
     status: "Published",
     date: "2025-02-01",
@@ -24,7 +24,7 @@ export const chapters = [
   {
     comicId: 1,
     number: 3,
-    title: "Chapter 3: Into the Abyss",
+    title: "Into the Abyss",
     description: "The dark journey begins.",
     status: "Published",
     date: "2025-01-15",
@@ -35,7 +35,7 @@ export const chapters = [
   {
     comicId: 1,
     number: 4,
-    title: "Chapter 4: The Deepening Abyss",
+    title: "The Deepening Abyss",
     description: "The journey grows darker.",
     status: "Published",
     date: "2025-01-20",
@@ -46,7 +46,7 @@ export const chapters = [
   {
     comicId: 2,
     number: 1,
-    title: "Chapter 1: A New Dawn",
+    title: "A New Dawn",
     description: "A new story begins.",
     status: "Published",
     date: "2025-01-15",
@@ -57,7 +57,7 @@ export const chapters = [
   {
     comicId: 2,
     number: 2,
-    title: "Chapter 2: Rising Shadows",
+    title: "Rising Shadows",
     description: "Shadows emerge.",
     status: "Published",
     date: "2025-01-15",
