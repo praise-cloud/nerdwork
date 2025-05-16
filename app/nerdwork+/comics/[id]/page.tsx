@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/button';
 import { comics } from '@/lib/comicDataSample';
 import { chapters as initialChapters } from '@/lib/chapterDataSample';
 import { notFound } from 'next/navigation';
-import { useState} from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useWalletState } from '@/components/common/nerdwork+/navigationBar';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Connection } from '@solana/web3.js';
 import { clusterApiUrl } from '@solana/web3.js';
 import PurchaseModal from '@/components/common/nerdwork+/purchaseModal';
-
+import React from 'react';
 
 // Define type for sendTransaction function
 type SendTransaction = (transaction: Transaction, connection: Connection) => Promise<string>;
@@ -114,7 +114,15 @@ async function purchaseChapter(userId: string | null, chapterId: number, sendTra
   }
 }
 
-export default function ComicDetailPage({ params }: { params: { id: string } }) {
+// Define the PageProps type to match Next.js's expectation
+interface PageProps {
+  params: Promise<{ id: string }>;
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default function ComicDetailPage({ params: paramsPromise }: PageProps) {
+  // Unwrap the params Promise using React.use()
+  const params = React.use(paramsPromise);
   const comicId = parseInt(params.id);
   const comic = comics.find((c) => c.id === comicId);
   const router = useRouter();
@@ -130,12 +138,6 @@ export default function ComicDetailPage({ params }: { params: { id: string } }) 
   if (isNaN(comicId) || !comic) {
     return notFound();
   }
-
-  // Debug logging
-  // useEffect(() => {
-  //   console.log('Wallet state in ComicDetailPage:', { address, connected, balance, sendTransaction });
-  //   console.log('Comic chapters:', comicChapters);
-  // }, [address, connected, balance, sendTransaction, comicChapters]);
 
   const firstChapter = comicChapters.find((ch) => ch.number === 1);
 

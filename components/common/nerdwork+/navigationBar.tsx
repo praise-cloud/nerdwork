@@ -86,7 +86,7 @@ function WalletStateManager({ children }: { children: React.ReactNode }) {
 
 export function WalletContextProvider({ children }: { children: React.ReactNode }) {
   const network = WalletAdapterNetwork.Devnet;
-  const endpoint = useMemo(() => clusterApiUrl(network), []); // Removed 'network' dependency
+  const endpoint = useMemo(() => clusterApiUrl(network), [network]); // Removed 'network' dependency
   const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], []);
 
   return (
@@ -196,7 +196,6 @@ function WalletSignUpButton() {
           borderRadius: "5px",
           fontSize: "14px",
         }}
-        labels={{ main: "Sign" }}
       />
     </div>
   );
