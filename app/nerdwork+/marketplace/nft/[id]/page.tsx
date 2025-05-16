@@ -11,7 +11,7 @@ export default function ComingSoon() {
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-muted-foreground mb-4 text-md">
-            We're working hard to bring you something amazing. Stay tuned!
+            We&apos;re working hard to bring you something amazing. Stay tuned!
           </p>
         </CardContent>
       </Card>
